@@ -1,0 +1,18 @@
+# Never commit vendor firmware or third-party datasheets/code
+*.bin
+*.hex
+*.pdf
+ida_xa_module/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
