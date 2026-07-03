@@ -76,6 +76,44 @@ def test_add_indirect_imm8():
     assert ops == ["[R3]", "#0x55"]
 
 
+def test_all_basic_alu_ops_named():
+    # Op nibbles verified byte-for-byte from each instruction's Ch.6 page.
+    from xa_toolkit.isa import ALU_OPS
+    assert ALU_OPS == {
+        0x0: "add", 0x1: "addc", 0x2: "sub", 0x3: "subb", 0x4: "cmp",
+        0x5: "and", 0x6: "or", 0x7: "xor", 0x8: "mov",
+    }
+
+
+def test_cmp_reg_reg():
+    # CMP Rd,Rs : byte0 = 0100 S 001 (p. 6-80). CMP.w R1,R2 -> 0x49, 0x12
+    size, mnem, ops = decode(bytes([0x49, 0x12]))
+    assert mnem == "cmp.w"
+    assert ops == ["R1", "R2"]
+
+
+def test_mov_reg_reg():
+    # MOV Rd,Rs : byte0 = 1000 S 001 (p. 6-110). MOV.w R1,R2 -> 0x89, 0x12
+    size, mnem, ops = decode(bytes([0x89, 0x12]))
+    assert mnem == "mov.w"
+    assert ops == ["R1", "R2"]
+
+
+def test_and_indirect_reg():
+    # AND [Rd],Rs : byte0 = 0101 S 010 (p. 6-47), byte1 = ssss 1ddd
+    # AND.w [R3],R2 -> byte0 = 0x5A, byte1 = 0b0010_1_011 = 0x2B
+    size, mnem, ops = decode(bytes([0x5A, 0x2B]))
+    assert mnem == "and.w"
+    assert ops == ["[R3]", "R2"]
+
+
+def test_sub_reg_reg():
+    # SUB Rd,Rs : byte0 = 0010 S 001 (p. 6-155). SUB.w R5,R6 -> 0x29, 0x56
+    size, mnem, ops = decode(bytes([0x29, 0x56]))
+    assert mnem == "sub.w"
+    assert ops == ["R5", "R6"]
+
+
 def test_unknown_opcode_is_not_guessed():
     # Opcodes we have not verified must decode as "?", never fabricated.
     size, mnem, ops = decode(bytes([0xFF, 0x00]))

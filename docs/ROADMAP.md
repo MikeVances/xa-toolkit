@@ -14,7 +14,8 @@ opcodes are never fabricated (they decode as `alu<n>` / `?`).
 Source: *Philips XA User Guide*, Chapter 6 (per-instruction encodings) + Table 6.5 (sizes).
 
 1. [ ] **Confirm SZ (size-bit) polarity** from Ch.6 general encoding notes; make `.b/.w` authoritative.
-2. [ ] **Fill `ALU_OPS`**: read the ADDC/SUB/SUBB/CMP/AND/OR/XOR/MOV pages → op nibbles (byte-verify each).
+2. [x] **Fill `ALU_OPS`**: ADD/ADDC/SUB/SUBB/CMP/AND/OR/XOR/MOV = nibbles 0x0–0x8, each read
+       byte-for-byte from its Ch.6 "Rd, Rs" page (manual, verified — no parser). Done 2026-07-03.
 3. [ ] **Shift/misc group**: ASL/ASR/LSR/RL/RLC/RR/RRC/NORM, NEG/SEXT/CPL/DA, ADDS, MUL/DIV, LEA.
 4. [ ] **Data movement**: MOVS, MOVC, MOVX, PUSH/PUSHU/POP/POPU (incl. Rlist), XCH.
 5. [ ] **Program flow**: BR, Bcc (15), CALL/rel16 & [Rs], FCALL/FJMP addr24, JMP variants, CJNE, DJNZ, JB/JBC/JNB, JZ/JNZ, RET, RETI.

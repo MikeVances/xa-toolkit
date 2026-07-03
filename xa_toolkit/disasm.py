@@ -57,7 +57,10 @@ def decode(mem: Sequence[int], pc: int = 0) -> Tuple[int, str, List[str]]:
         return (size, mnem, ["?", immstr])   # other immediate sub-modes: Ch.6 TODO
 
     # -- basic-ALU register/memory group: byte0 = OOOO S mmm ------------------
-    if hi in ALU_OPS or (1 <= sub <= 6 and hi <= 0x8):
+    # (ADD..MOV = nibbles 0x0..0x8; sub-mode in the low 3 bits selects 1..6).
+    # NOTE: other instruction groups may also use hi-nibbles 0..8 — refine this
+    # dispatch as their opcodes are added; for now ALU is decoded best-effort.
+    if hi in ALU_OPS:
         info = ALU_SUBMODES.get(sub)
         if info is not None:
             name, size = info

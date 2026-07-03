@@ -96,11 +96,22 @@ CORE_SFRS = ["PSWL", "PSWH", "SCR", "SSEL", "ES", "DS", "CS", "PCON"]
 # their Ch.6 pages (ADDC/SUB/SUBB/CMP/AND/OR/XOR/MOV).
 # ==========================================================================
 
-# ALU op nibble -> mnemonic. VERIFIED: ADD = 0b0000 (Ch.6 p. 6-32).
+# ALU op nibble -> mnemonic. Each nibble read byte-for-byte from the "Rd, Rs"
+# encoding on that instruction's Chapter-6 page (manual verification, not parsed).
 ALU_OPS: dict[int, str] = {
-    0x0: "add",   # p. 6-32, byte-for-byte
-    # 0x1: "addc", 0x2: "sub", ... — TODO: read each op's Ch.6 page to confirm.
+    0x0: "add",    # p. 6-32
+    0x1: "addc",   # p. 6-38
+    0x2: "sub",    # p. 6-155
+    0x3: "subb",   # p. 6-161
+    0x4: "cmp",    # p. 6-80
+    0x5: "and",    # p. 6-47
+    0x6: "or",     # p. 6-132
+    0x7: "xor",    # p. 6-170
+    0x8: "mov",    # p. 6-110
 }
+# Immediate forms (byte0 hi-nibble 0x9) carry the ALU op in byte1's LOW nibble.
+# Verified for ADD (byte1 = dddd 0000). The other ops reuse the same nibble map
+# above (structural — confirm per-op when their immediate pages are read).
 
 # Sub-mode (byte0 low 3 bits) -> (name, total_size_bytes). From ADD (p.6-32..35).
 ALU_SUBMODES = {
