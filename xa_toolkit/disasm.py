@@ -15,7 +15,9 @@ from __future__ import annotations
 
 from typing import List, Sequence, Tuple
 
-from .isa import ALU_OPS, ALU_SUBMODES, BRANCH_CC, OP_BKPT
+from .isa import (
+    ALU_OPS, ALU_SUBMODES, BRANCH_CC, OP_BKPT, OP_FJMP, OP_JMP_REL16, OP_D6,
+)
 
 # NOTE: SZ (byte0 bit3) polarity — provisional (word if set). The ADD pages show
 # the "SZ" field but not its 0/1->byte/word mapping; confirm from the Ch.6
@@ -67,6 +69,25 @@ def decode(mem: Sequence[int], pc: int = 0) -> Tuple[int, str, List[str]]:
                 rel8 -= 0x100
             target = (pc + 2 + rel8 * 2) & 0xFFFFFF   # word-aligned PC-relative
             return (2, mnem, [f"0x{target:x}"])
+
+    # -- far/absolute + register-indirect flow (0xD4..0xD6, Ch.6) ------------
+    if b0 == OP_FJMP:                          # 4 bytes: addr24
+        addr = (mem[pc + 3] << 16) | (mem[pc + 1] << 8) | mem[pc + 2]
+        return (4, "fjmp", [f"0x{addr:06x}"])
+    if b0 == OP_JMP_REL16:                      # 3 bytes: signed rel16
+        rel16 = (mem[pc + 1] << 8) | mem[pc + 2]
+        if rel16 >= 0x8000:
+            rel16 -= 0x10000
+        return (3, "jmp", [f"0x{(pc + 3 + rel16 * 2) & 0xFFFFFF:x}"])
+    if b0 == OP_D6:                             # multiplexed by byte1
+        b1 = mem[pc + 1]
+        if b1 == 0x80:
+            return (2, "ret", [])
+        if b1 == 0x90:
+            return (2, "reti", [])
+        if (b1 & 0xF8) == 0x70:                 # 0b01110sss
+            return (2, "jmp", [f"[{_r(b1 & 0x7)}]"])
+        # other 0xD6 forms (JMP [A+DPTR], [[Rs+]], CALL [Rs], ...) not yet decoded
 
     # -- basic-ALU register/memory group: byte0 = OOOO S mmm ------------------
     # (ADD..MOV = nibbles 0x0..0x8; sub-mode in the low 3 bits selects 1..6).

@@ -138,5 +138,24 @@ BRANCH_CC: dict[int, str] = {
 }
 OP_BKPT = 0xFF  # breakpoint, Ch.6 p. 6-65
 
+# --------------------------------------------------------------------------
+# Far/absolute + register-indirect control flow (read byte-for-byte from Ch.6).
+# These live in the 0xD4..0xD6 opcodes, which are unambiguous vs. the shift
+# group (shifts use 0xC?/0xD? only with a valid 2-bit size field; the 0x?4/?5/?6
+# low nibbles here correspond to size=01, which is not a valid shift size).
+#   FJMP addr24  = 0xD4  (p. 6-97): byte1=addr[15:8], byte2=addr[7:0], byte3=addr[23:16]
+#   JMP  rel16   = 0xD5  (p. 6-100): byte1..2 = rel16 (hi,lo); target = PC+3+rel16*2
+#   0xD6 group   = multiplexed by byte1: RET 0x80 (6-147), RETI 0x90 (6-148),
+#                  JMP [Rs] = 0b01110sss (6-101).
+# --------------------------------------------------------------------------
+OP_FJMP = 0xD4
+OP_JMP_REL16 = 0xD5
+OP_D6 = 0xD6
+
+# DEFERRED — do NOT add without resolving (honest gaps):
+#   FCALL addr24: p. 6-96 shows opcode 0xC2, but that also matches a byte-size
+#     shift (ASR.b etc. = 0xC2). Resolve the collision when the shift group is read.
+#   CALL rel16 (3 bytes): opcode box did not render on p. 6-75 — needs a re-read.
+
 # Legacy placeholder kept for API stability.
 ENCODING: dict[int, dict] = {}

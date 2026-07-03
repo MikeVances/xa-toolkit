@@ -22,7 +22,10 @@ Source: *Philips XA User Guide*, Chapter 6 (per-instruction encodings) + Table 6
 5. **Program flow**:
    - [x] Short branches: Bcc (14 condition codes 0xF0–0xFD) + BR (0xFE) + BKPT (0xFF), byte1=rel8,
          target = PC+2+rel8*2. Each opcode read byte-for-byte from its Ch.6 page. Done 2026-07-03.
-   - [ ] CALL/rel16 & [Rs], FCALL/FJMP addr24, JMP variants, CJNE, DJNZ, JB/JBC/JNB, JZ/JNZ, RET, RETI.
+   - [x] FJMP addr24 (0xD4), JMP rel16 (0xD5), JMP [Rs] / RET / RETI (0xD6 group). Done 2026-07-03.
+   - [ ] **FCALL** (0xC2 collides with a byte-shift — resolve with the shift group) and
+         **CALL rel16** (opcode box didn't render on p. 6-75 — re-read).
+   - [ ] JMP [A+DPTR] / JMP [[Rs+]] (other 0xD6 byte1 forms), CJNE, DJNZ, JB/JBC/JNB, JZ/JNZ.
 6. [ ] **Bit ops**: ANL/ORL C,bit(/bit), CLR/SETB bit, MOV C,bit / bit,C.
 7. [ ] **Exception**: NOP, BKPT, RESET, TRAP #data4.
 8. [ ] Per-opcode test (each row ↔ its Ch.6 page). **Adversarially verify** every encoding against the datasheet.

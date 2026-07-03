@@ -148,6 +148,36 @@ def test_bkpt_is_one_byte():
     assert mnem == "bkpt"
 
 
+def test_fjmp_addr24():
+    # FJMP addr24 (0xD4): byte1=addr[15:8], byte2=addr[7:0], byte3=addr[23:16] (p. 6-97)
+    size, mnem, ops = decode(bytes([0xD4, 0x34, 0x12, 0x56]))
+    assert size == 4
+    assert mnem == "fjmp"
+    assert ops == ["0x563412"]
+
+
+def test_jmp_rel16():
+    # JMP rel16 (0xD5): rel16 = +2 -> target = pc(0) + 3 + 2*2 = 7 (p. 6-100)
+    size, mnem, ops = decode(bytes([0xD5, 0x00, 0x02]))
+    assert size == 3
+    assert mnem == "jmp"
+    assert ops == ["0x7"]
+
+
+def test_jmp_indirect_reg():
+    # JMP [Rs] (0xD6, byte1 = 0b01110sss) (p. 6-101). Rs=3 -> byte1 = 0x73
+    size, mnem, ops = decode(bytes([0xD6, 0x73]))
+    assert size == 2
+    assert mnem == "jmp"
+    assert ops == ["[R3]"]
+
+
+def test_ret_and_reti():
+    # RET = 0xD6 0x80 (6-147); RETI = 0xD6 0x90 (6-148)
+    assert decode(bytes([0xD6, 0x80])) == (2, "ret", [])
+    assert decode(bytes([0xD6, 0x90])) == (2, "reti", [])
+
+
 def test_unknown_opcode_is_not_guessed():
     # An opcode group we have not decoded yet must render "?", never fabricated.
     size, mnem, ops = decode(bytes([0xE0, 0x00]))
