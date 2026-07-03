@@ -123,5 +123,20 @@ ALU_SUBMODES = {
     0b110: ("direct",  3),   # Rd,direct  (11-bit direct: 3 bits in byte1 + byte2)
 }
 
+# --------------------------------------------------------------------------
+# Short branches — opcode block 0xF0..0xFE, byte1 = rel8 (Ch.6). Each opcode
+# read byte-for-byte from its page: byte0 = 0xF0 | cc. Target = PC+2+rel8*2
+# (rel8 signed; word-aligned). 0xFF = BKPT (1 byte, all-ones). Pages: BCC 6-59,
+# BNE 6-70, BEQ 6-61, BNV 6-71, BOV 6-72, BPL 6-73, BMI 6-69, BG 6-62, BL 6-66,
+# BGE 6-63, BLT 6-68, BGT 6-64, BLE 6-67, BR 6-74, BKPT 6-65.
+# --------------------------------------------------------------------------
+BRANCH_CC: dict[int, str] = {
+    0x0: "bcc", 0x1: "bcs", 0x2: "bne", 0x3: "beq",
+    0x4: "bnv", 0x5: "bov", 0x6: "bpl", 0x7: "bmi",
+    0x8: "bg",  0x9: "bl",  0xA: "bge", 0xB: "blt",
+    0xC: "bgt", 0xD: "ble", 0xE: "br",
+}
+OP_BKPT = 0xFF  # breakpoint, Ch.6 p. 6-65
+
 # Legacy placeholder kept for API stability.
 ENCODING: dict[int, dict] = {}

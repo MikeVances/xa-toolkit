@@ -114,7 +114,41 @@ def test_sub_reg_reg():
     assert ops == ["R5", "R6"]
 
 
+def test_branch_condition_codes_named():
+    from xa_toolkit.isa import BRANCH_CC
+    assert BRANCH_CC[0x0] == "bcc"
+    assert BRANCH_CC[0x3] == "beq"
+    assert BRANCH_CC[0xE] == "br"
+
+
+def test_bcc_forward_target():
+    # BCC rel8 (0xF0). rel8 = +3 -> target = pc(0) + 2 + 3*2 = 8  (p. 6-59)
+    size, mnem, ops = decode(bytes([0xF0, 0x03]))
+    assert size == 2
+    assert mnem == "bcc"
+    assert ops == ["0x8"]
+
+
+def test_branch_backward_target():
+    # rel8 = -1 (0xFF) -> target = 0 + 2 + (-1)*2 = 0
+    size, mnem, ops = decode(bytes([0xF0, 0xFF]))
+    assert ops == ["0x0"]
+
+
+def test_beq_bne_br():
+    assert decode(bytes([0xF3, 0x00]))[1] == "beq"
+    assert decode(bytes([0xF2, 0x00]))[1] == "bne"
+    assert decode(bytes([0xFE, 0x00]))[1] == "br"   # unconditional
+
+
+def test_bkpt_is_one_byte():
+    # BKPT = 0xFF, all-ones opcode, 1 byte (p. 6-65)
+    size, mnem, ops = decode(bytes([0xFF]))
+    assert size == 1
+    assert mnem == "bkpt"
+
+
 def test_unknown_opcode_is_not_guessed():
-    # Opcodes we have not verified must decode as "?", never fabricated.
-    size, mnem, ops = decode(bytes([0xFF, 0x00]))
+    # An opcode group we have not decoded yet must render "?", never fabricated.
+    size, mnem, ops = decode(bytes([0xE0, 0x00]))
     assert mnem == "?"

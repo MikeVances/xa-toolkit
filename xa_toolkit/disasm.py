@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import List, Sequence, Tuple
 
-from .isa import ALU_OPS, ALU_SUBMODES
+from .isa import ALU_OPS, ALU_SUBMODES, BRANCH_CC, OP_BKPT
 
 # NOTE: SZ (byte0 bit3) polarity — provisional (word if set). The ADD pages show
 # the "SZ" field but not its 0/1->byte/word mapping; confirm from the Ch.6
@@ -55,6 +55,18 @@ def decode(mem: Sequence[int], pc: int = 0) -> Tuple[int, str, List[str]]:
             d = (b1 >> 4) & 0x7
             return (size, mnem, [f"[{_r(d)}]", immstr])
         return (size, mnem, ["?", immstr])   # other immediate sub-modes: Ch.6 TODO
+
+    # -- short branches / breakpoint: opcode block 0xFx (Ch.6) ---------------
+    if hi == 0xF:
+        if b0 == OP_BKPT:                      # 0xFF: BKPT, 1 byte, no operand
+            return (1, "bkpt", [])
+        mnem = BRANCH_CC.get(b0 & 0xF)
+        if mnem is not None:                   # 0xF0..0xFE: byte1 = signed rel8
+            rel8 = mem[pc + 1]
+            if rel8 >= 0x80:
+                rel8 -= 0x100
+            target = (pc + 2 + rel8 * 2) & 0xFFFFFF   # word-aligned PC-relative
+            return (2, mnem, [f"0x{target:x}"])
 
     # -- basic-ALU register/memory group: byte0 = OOOO S mmm ------------------
     # (ADD..MOV = nibbles 0x0..0x8; sub-mode in the low 3 bits selects 1..6).

@@ -13,12 +13,16 @@ opcodes are never fabricated (they decode as `alu<n>` / `?`).
 ## Next (bulk extraction — best as a multi-agent workflow)
 Source: *Philips XA User Guide*, Chapter 6 (per-instruction encodings) + Table 6.5 (sizes).
 
-1. [ ] **Confirm SZ (size-bit) polarity** from Ch.6 general encoding notes; make `.b/.w` authoritative.
+1. [x] **SZ (size-bit) polarity** = `1 -> word`, `0 -> byte` (confirmed via the shift group's
+       SZ1/SZ0 note, p. 6-58: "00 byte, 10 word, 11 dword"). `.b/.w` suffix is now authoritative.
 2. [x] **Fill `ALU_OPS`**: ADD/ADDC/SUB/SUBB/CMP/AND/OR/XOR/MOV = nibbles 0x0–0x8, each read
        byte-for-byte from its Ch.6 "Rd, Rs" page (manual, verified — no parser). Done 2026-07-03.
 3. [ ] **Shift/misc group**: ASL/ASR/LSR/RL/RLC/RR/RRC/NORM, NEG/SEXT/CPL/DA, ADDS, MUL/DIV, LEA.
 4. [ ] **Data movement**: MOVS, MOVC, MOVX, PUSH/PUSHU/POP/POPU (incl. Rlist), XCH.
-5. [ ] **Program flow**: BR, Bcc (15), CALL/rel16 & [Rs], FCALL/FJMP addr24, JMP variants, CJNE, DJNZ, JB/JBC/JNB, JZ/JNZ, RET, RETI.
+5. **Program flow**:
+   - [x] Short branches: Bcc (14 condition codes 0xF0–0xFD) + BR (0xFE) + BKPT (0xFF), byte1=rel8,
+         target = PC+2+rel8*2. Each opcode read byte-for-byte from its Ch.6 page. Done 2026-07-03.
+   - [ ] CALL/rel16 & [Rs], FCALL/FJMP addr24, JMP variants, CJNE, DJNZ, JB/JBC/JNB, JZ/JNZ, RET, RETI.
 6. [ ] **Bit ops**: ANL/ORL C,bit(/bit), CLR/SETB bit, MOV C,bit / bit,C.
 7. [ ] **Exception**: NOP, BKPT, RESET, TRAP #data4.
 8. [ ] Per-opcode test (each row ↔ its Ch.6 page). **Adversarially verify** every encoding against the datasheet.
