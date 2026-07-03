@@ -17,7 +17,10 @@ Source: *Philips XA User Guide*, Chapter 6 (per-instruction encodings) + Table 6
        SZ1/SZ0 note, p. 6-58: "00 byte, 10 word, 11 dword"). `.b/.w` suffix is now authoritative.
 2. [x] **Fill `ALU_OPS`**: ADD/ADDC/SUB/SUBB/CMP/AND/OR/XOR/MOV = nibbles 0x0–0x8, each read
        byte-for-byte from its Ch.6 "Rd, Rs" page (manual, verified — no parser). Done 2026-07-03.
-3. [ ] **Shift/misc group**: ASL/ASR/LSR/RL/RLC/RR/RRC/NORM, NEG/SEXT/CPL/DA, ADDS, MUL/DIV, LEA.
+3. **Shift / rotate group**:
+   - [x] ASL/ASR (reg + imm #data4, byte/word), RL/RLC/RR/RRC (imm #data4, byte/word). Done 2026-07-03.
+         Resolved: ASR.b reg (0xC2) shares byte0 with the deferred FCALL.
+   - [ ] Double-word (#data5) shift forms, LSR, NORM, NEG/SEXT/CPL/DA, ADDS, MUL/DIV, LEA.
 4. [ ] **Data movement**: MOVS, MOVC, MOVX, PUSH/PUSHU/POP/POPU (incl. Rlist), XCH.
 5. **Program flow**:
    - [x] Short branches: Bcc (14 condition codes 0xF0–0xFD) + BR (0xFE) + BKPT (0xFF), byte1=rel8,

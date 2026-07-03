@@ -157,5 +157,31 @@ OP_D6 = 0xD6
 #     shift (ASR.b etc. = 0xC2). Resolve the collision when the shift group is read.
 #   CALL rel16 (3 bytes): opcode box did not render on p. 6-75 — needs a re-read.
 
+# --------------------------------------------------------------------------
+# Shift / rotate group (read byte-for-byte from Ch.6). Byte & word forms only
+# here; the double-word (#data5) forms and LSR/NORM are deferred (not yet read).
+#
+# Arithmetic shifts — size in bits 3-2 (SZ1 SZ0: 00->.b, 10->.w):
+#   ASL reg (Rd,Rs)   1100 SZ1SZ0 01   p. 6-56    ASL imm (Rd,#data4) 1101 SZ1SZ0 01
+#   ASR reg (Rd,Rs)   1100 SZ1SZ0 10   p. 6-58    ASR imm (Rd,#data4) 1101 SZ1SZ0 10
+# Rotates — single size bit (SZ: 0->.b, 1->.w), immediate #data4 only:
+#   RR  1011 SZ 000  6-151   RRC 1011 SZ 111  6-152
+#   RL  1101 SZ 011  6-149   RLC 1101 SZ 111  6-150
+# NOTE: ASR.b reg (0xC2) shares byte0 with the deferred FCALL — no active clash
+# because FCALL is not decoded yet; resolve when FCALL is added.
+# --------------------------------------------------------------------------
+SHIFT_REG: dict[int, tuple] = {          # byte1 = dddd ssss -> "Rd, Rs"
+    0xC1: ("asl", ".b"), 0xC9: ("asl", ".w"),
+    0xC2: ("asr", ".b"), 0xCA: ("asr", ".w"),
+}
+SHIFT_IMM4: dict[int, tuple] = {         # byte1 = dddd <#data4> -> "Rd, #data4"
+    0xD1: ("asl", ".b"), 0xD9: ("asl", ".w"),
+    0xD2: ("asr", ".b"), 0xDA: ("asr", ".w"),
+    0xD3: ("rl",  ".b"), 0xDB: ("rl",  ".w"),
+    0xD7: ("rlc", ".b"), 0xDF: ("rlc", ".w"),
+    0xB0: ("rr",  ".b"), 0xB8: ("rr",  ".w"),
+    0xB7: ("rrc", ".b"), 0xBF: ("rrc", ".w"),
+}
+
 # Legacy placeholder kept for API stability.
 ENCODING: dict[int, dict] = {}

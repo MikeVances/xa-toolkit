@@ -178,6 +178,33 @@ def test_ret_and_reti():
     assert decode(bytes([0xD6, 0x90])) == (2, "reti", [])
 
 
+def test_asl_reg():
+    # ASL Rd,Rs : 1100 SZ1SZ0 01 (p. 6-56). ASL.b R1,R2 -> 0xC1, 0x12
+    size, mnem, ops = decode(bytes([0xC1, 0x12]))
+    assert size == 2 and mnem == "asl.b" and ops == ["R1", "R2"]
+
+
+def test_asr_word_reg():
+    # ASR.w Rd,Rs : 0xCA (1100 10 10). R3,R5 -> byte1 0x35
+    assert decode(bytes([0xCA, 0x35])) == (2, "asr.w", ["R3", "R5"])
+
+
+def test_rl_imm4():
+    # RL Rd,#data4 : 1101 SZ 011 (p. 6-149). RL.b R2,#4 -> 0xD3, byte1 0x24
+    assert decode(bytes([0xD3, 0x24])) == (2, "rl.b", ["R2", "#0x4"])
+
+
+def test_rr_and_rrc():
+    # RR 1011 SZ 000 (6-151); RRC 1011 SZ 111 (6-152)
+    assert decode(bytes([0xB0, 0x17])) == (2, "rr.b", ["R1", "#0x7"])
+    assert decode(bytes([0xBF, 0x50])) == (2, "rrc.w", ["R5", "#0x0"])
+
+
+def test_rlc_word():
+    # RLC.w : 0xDF (1101 1 111). R4,#3 -> byte1 0x43
+    assert decode(bytes([0xDF, 0x43])) == (2, "rlc.w", ["R4", "#0x3"])
+
+
 def test_unknown_opcode_is_not_guessed():
     # An opcode group we have not decoded yet must render "?", never fabricated.
     size, mnem, ops = decode(bytes([0xE0, 0x00]))

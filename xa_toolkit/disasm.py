@@ -17,6 +17,7 @@ from typing import List, Sequence, Tuple
 
 from .isa import (
     ALU_OPS, ALU_SUBMODES, BRANCH_CC, OP_BKPT, OP_FJMP, OP_JMP_REL16, OP_D6,
+    SHIFT_REG, SHIFT_IMM4,
 )
 
 # NOTE: SZ (byte0 bit3) polarity — provisional (word if set). The ADD pages show
@@ -88,6 +89,16 @@ def decode(mem: Sequence[int], pc: int = 0) -> Tuple[int, str, List[str]]:
         if (b1 & 0xF8) == 0x70:                 # 0b01110sss
             return (2, "jmp", [f"[{_r(b1 & 0x7)}]"])
         # other 0xD6 forms (JMP [A+DPTR], [[Rs+]], CALL [Rs], ...) not yet decoded
+
+    # -- shift / rotate group (byte & word forms; Ch.6) ----------------------
+    if b0 in SHIFT_REG:                        # ASL/ASR Rd,Rs
+        mnem, sfx = SHIFT_REG[b0]
+        b1 = mem[pc + 1]
+        return (2, mnem + sfx, [_r((b1 >> 4) & 0xF), _r(b1 & 0xF)])
+    if b0 in SHIFT_IMM4:                        # ASL/ASR/RL/RLC/RR/RRC Rd,#data4
+        mnem, sfx = SHIFT_IMM4[b0]
+        b1 = mem[pc + 1]
+        return (2, mnem + sfx, [_r((b1 >> 4) & 0xF), f"#0x{b1 & 0xF:x}"])
 
     # -- basic-ALU register/memory group: byte0 = OOOO S mmm ------------------
     # (ADD..MOV = nibbles 0x0..0x8; sub-mode in the low 3 bits selects 1..6).
