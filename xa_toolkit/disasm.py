@@ -38,6 +38,11 @@ def decode(mem: Sequence[int], pc: int = 0) -> Tuple[int, str, List[str]]:
     sz = (b0 >> 3) & 1
     sub = b0 & 0x7
 
+    # -- MOVC A,[A+DPTR] / A,[A+PC] — fixed 2-byte forms (6-121/6-122) --------
+    # Must precede the 0x9x ALU-immediate group (shared high nibble 0x9).
+    if b0 == 0x90 and mem[pc + 1] in (0x4E, 0x4C):
+        return (2, "movc", ["A", "[A+DPTR]" if mem[pc + 1] == 0x4E else "[A+PC]"])
+
     # -- basic-ALU immediate group: byte0 high nibble 0x9 --------------------
     if hi == 0x9:
         data16 = (b0 >> 3) & 1
@@ -57,7 +62,8 @@ def decode(mem: Sequence[int], pc: int = 0) -> Tuple[int, str, List[str]]:
         if isub == 0b010:      # [reg], #data (byte1 = 0ddd 0000)
             d = (b1 >> 4) & 0x7
             return (size, mnem, [f"[{_r(d)}]", immstr])
-        return (size, mnem, ["?", immstr])   # other immediate sub-modes: Ch.6 TODO
+        # other 0x9x sub-modes (offset/direct immediate, and non-ALU 0x90 forms)
+        # not decoded yet — fall through to the generic "?" rather than guess.
 
     # -- short branches / breakpoint: opcode block 0xFx (Ch.6) ---------------
     if hi == 0xF:
@@ -99,6 +105,37 @@ def decode(mem: Sequence[int], pc: int = 0) -> Tuple[int, str, List[str]]:
         mnem, sfx = SHIFT_IMM4[b0]
         b1 = mem[pc + 1]
         return (2, mnem + sfx, [_r((b1 >> 4) & 0xF), f"#0x{b1 & 0xF:x}"])
+
+    # -- data movement: MOVC [Rs+], MOVX, MOVS (Ch.6) ------------------------
+    if b0 in (0x80, 0x88):                     # MOVC Rd,[Rs+]  (6-120)
+        b1 = mem[pc + 1]
+        sfx = ".w" if b0 == 0x88 else ".b"
+        return (2, "movc" + sfx, [_r((b1 >> 4) & 0xF), f"[{_r(b1 & 0x7)}+]"])
+    if b0 in (0xA7, 0xAF):                      # MOVX Rd,[Rs] / [Rd],Rs  (6-125)
+        b1 = mem[pc + 1]
+        sfx = ".w" if b0 == 0xAF else ".b"
+        reg = _r((b1 >> 4) & 0xF)
+        mem_op = f"[{_r(b1 & 0x7)}]"
+        return (2, "movx" + sfx, [reg, mem_op] if ((b1 >> 3) & 1) == 0 else [mem_op, reg])
+    if 0xB1 <= b0 <= 0xB6 or 0xB9 <= b0 <= 0xBE:  # MOVS <dest>,#data4  (6-123/124)
+        msub = b0 & 0x7
+        sfx = ".w" if (b0 & 0x08) else ".b"
+        b1 = mem[pc + 1]
+        imm = f"#0x{b1 & 0xF:x}"
+        if msub == 0b001:                        # Rd, #data4
+            return (2, "movs" + sfx, [_r((b1 >> 4) & 0xF), imm])
+        ptr = (b1 >> 4) & 0x7
+        if msub == 0b010:
+            return (2, "movs" + sfx, [f"[{_r(ptr)}]", imm])
+        if msub == 0b011:
+            return (2, "movs" + sfx, [f"[{_r(ptr)}+]", imm])
+        if msub == 0b100:
+            return (3, "movs" + sfx, [f"[{_r(ptr)}+0x{mem[pc + 2]:02x}]", imm])
+        if msub == 0b101:
+            off = (mem[pc + 2] << 8) | mem[pc + 3]
+            return (4, "movs" + sfx, [f"[{_r(ptr)}+0x{off:04x}]", imm])
+        if msub == 0b110:
+            return (3, "movs" + sfx, [f"0x{(ptr << 8) | mem[pc + 2]:03x}", imm])
 
     # -- basic-ALU register/memory group: byte0 = OOOO S mmm ------------------
     # (ADD..MOV = nibbles 0x0..0x8; sub-mode in the low 3 bits selects 1..6).

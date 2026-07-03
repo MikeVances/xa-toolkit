@@ -205,6 +205,35 @@ def test_rlc_word():
     assert decode(bytes([0xDF, 0x43])) == (2, "rlc.w", ["R4", "#0x3"])
 
 
+def test_movc_indirect_autoinc():
+    # MOVC Rd,[Rs+] : 1000 SZ 000 (p. 6-120). MOVC.b R1,[R2+] -> 0x80, 0x12
+    assert decode(bytes([0x80, 0x12])) == (2, "movc.b", ["R1", "[R2+]"])
+
+
+def test_movc_a_dptr_and_pc():
+    # MOVC A,[A+DPTR] = 0x90 0x4E (6-121); MOVC A,[A+PC] = 0x90 0x4C (6-122)
+    assert decode(bytes([0x90, 0x4E])) == (2, "movc", ["A", "[A+DPTR]"])
+    assert decode(bytes([0x90, 0x4C])) == (2, "movc", ["A", "[A+PC]"])
+
+
+def test_movx_both_directions():
+    # MOVX 0xA7/0xAF, byte1 direction bit (p. 6-125)
+    assert decode(bytes([0xA7, 0x12])) == (2, "movx.b", ["R1", "[R2]"])   # Rd,[Rs]
+    assert decode(bytes([0xA7, 0x2B])) == (2, "movx.b", ["[R3]", "R2"])   # [Rd],Rs
+
+
+def test_movs_reg_and_indirect():
+    # MOVS <dest>,#data4 : 1011 SZ sub (p. 6-123). Coexists with RR/RRC (0xB0/B7/B8/BF).
+    assert decode(bytes([0xB1, 0x57])) == (2, "movs.b", ["R5", "#0x7"])
+    assert decode(bytes([0xB2, 0x34])) == (2, "movs.b", ["[R3]", "#0x4"])
+
+
+def test_rotate_still_wins_b0_b7():
+    # sanity: 0xB0/0xB7 remain RR/RRC, not MOVS (MOVS is 0xB1..0xB6)
+    assert decode(bytes([0xB0, 0x17]))[1] == "rr.b"
+    assert decode(bytes([0xB7, 0x10]))[1] == "rrc.b"
+
+
 def test_unknown_opcode_is_not_guessed():
     # An opcode group we have not decoded yet must render "?", never fabricated.
     size, mnem, ops = decode(bytes([0xE0, 0x00]))
