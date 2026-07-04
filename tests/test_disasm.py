@@ -296,6 +296,24 @@ def test_djnz_forms():
     assert decode(bytes([0x87, 0x32, 0x34]))[1] == "push.b"
 
 
+def test_unary_ops():
+    # 0x90/0x98, byte1 low nibble = op (DA 8 / SEXT 9 / CPL A / NEG B)
+    assert decode(bytes([0x90, 0x1B])) == (2, "neg.b", ["R1"])    # NEG (6-129)
+    assert decode(bytes([0x98, 0x3A])) == (2, "cpl.w", ["R3"])    # CPL (6-87)
+    assert decode(bytes([0x90, 0x28])) == (2, "da.b", ["R2"])     # DA  (6-88)
+    assert decode(bytes([0x90, 0x59])) == (2, "sext.b", ["R5"])   # SEXT (6-154)
+
+
+def test_nop():
+    # NOP = 0x00, 1 byte (6-130)
+    assert decode(bytes([0x00])) == (1, "nop", [])
+
+
+def test_trap():
+    # TRAP #data4 = 0xD6, byte1 = 0011 dddd (6-168)
+    assert decode(bytes([0xD6, 0x35])) == (2, "trap", ["#0x5"])
+
+
 def test_unknown_opcode_is_not_guessed():
     # An opcode group we have not decoded yet must render "?", never fabricated.
     size, mnem, ops = decode(bytes([0xE0, 0x00]))

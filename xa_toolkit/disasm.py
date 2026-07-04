@@ -56,6 +56,14 @@ def decode(mem: Sequence[int], pc: int = 0) -> Tuple[int, str, List[str]]:
     if b0 == 0x90 and mem[pc + 1] in (0x4E, 0x4C):
         return (2, "movc", ["A", "[A+DPTR]" if mem[pc + 1] == 0x4E else "[A+PC]"])
 
+    # -- unary register ops: DA/SEXT/CPL/NEG (0x90/0x98; Ch.6) ---------------
+    # byte0 = 1001 SZ 000; byte1 low nibble selects the op.
+    if b0 in (0x90, 0x98):
+        b1 = mem[pc + 1]
+        op = {0x8: "da", 0x9: "sext", 0xA: "cpl", 0xB: "neg"}.get(b1 & 0x0F)
+        if op is not None:
+            return (2, op + (".w" if b0 == 0x98 else ".b"), [_r((b1 >> 4) & 0xF)])
+
     # -- basic-ALU immediate group: byte0 high nibble 0x9 --------------------
     if hi == 0x9:
         data16 = (b0 >> 3) & 1
@@ -107,6 +115,8 @@ def decode(mem: Sequence[int], pc: int = 0) -> Tuple[int, str, List[str]]:
             return (2, "reti", [])
         if (b1 & 0xF8) == 0x70:                 # 0b01110sss
             return (2, "jmp", [f"[{_r(b1 & 0x7)}]"])
+        if (b1 & 0xF0) == 0x30:                 # TRAP #data4 (byte1 = 0011 dddd) (6-168)
+            return (2, "trap", [f"#0x{b1 & 0xF:x}"])
         # other 0xD6 forms (JMP [A+DPTR], [[Rs+]], CALL [Rs], ...) not yet decoded
 
     # -- CJNE / DJNZ direct / JB-family / JZ / JNZ (Ch.6) --------------------
@@ -182,6 +192,9 @@ def decode(mem: Sequence[int], pc: int = 0) -> Tuple[int, str, List[str]]:
             return (4, "movs" + sfx, [f"[{_r(ptr)}+0x{off:04x}]", imm])
         if msub == 0b110:
             return (3, "movs" + sfx, [f"0x{(ptr << 8) | mem[pc + 2]:03x}", imm])
+
+    if b0 == 0x00:                               # NOP — 1 byte, all zeros (6-130)
+        return (1, "nop", [])
 
     # -- bit manipulation: CLR/SETB/ANL/ORL (byte0 0x08; Ch.6) ---------------
     # byte1[7:2] selects the op; bit address (10-bit) = (byte1 & 3):byte2.

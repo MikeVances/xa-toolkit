@@ -20,7 +20,8 @@ Source: *Philips XA User Guide*, Chapter 6 (per-instruction encodings) + Table 6
 3. **Shift / rotate group**:
    - [x] ASL/ASR (reg + imm #data4, byte/word), RL/RLC/RR/RRC (imm #data4, byte/word). Done 2026-07-03.
          Resolved: ASR.b reg (0xC2) shares byte0 with the deferred FCALL.
-   - [ ] Double-word (#data5) shift forms, LSR, NORM, NEG/SEXT/CPL/DA, ADDS, MUL/DIV, LEA.
+   - [x] NEG/SEXT/CPL/DA (0x90/0x98, byte1 low nibble = op). Done 2026-07-04.
+   - [ ] Double-word (#data5) shift forms, LSR, NORM, ADDS, MUL/DIV, LEA.
 4. **Data movement**:
    - [x] MOVC (Rd,[Rs+] 0x80/88; A,[A+DPTR] & A,[A+PC] 0x90), MOVX (0xA7/AF), MOVS (0xB1–B6/B9–BE,
          all sub-modes; coexists with RR/RRC at 0xB0/B7/B8/BF). Done 2026-07-03.
@@ -38,7 +39,9 @@ Source: *Philips XA User Guide*, Chapter 6 (per-instruction encodings) + Table 6
 6. **Bit ops** (byte0 0x08, byte1[7:2] = op, 10-bit bit addr):
    - [x] CLR (0x00), SETB (0x10), ANL C,bit (0x40), ORL C,bit (0x60). Done 2026-07-04.
    - [ ] ANL/ORL C,/bit (complement), MOV C,bit / MOV bit,C.
-7. [ ] **Exception**: NOP, BKPT, RESET, TRAP #data4.
+7. **Misc / exception**:
+   - [x] NOP (0x00), BKPT (0xFF), TRAP #data4 (0xD6 byte1=0x3x). Done 2026-07-04.
+   - [ ] RESET.
 8. [ ] Per-opcode test (each row ↔ its Ch.6 page). **Adversarially verify** every encoding against the datasheet.
 
 ## Then
