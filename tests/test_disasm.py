@@ -265,6 +265,37 @@ def test_bit_ops():
     assert decode(bytes([0x08, 0x12, 0xA0])) == (3, "setb", ["0x2a0"])       # SETB bit (6-153)
 
 
+def test_jz_jnz():
+    # JZ 0xEC (6-106), JNZ 0xEE (6-105): rel8 -> target = PC+2+rel8*2
+    assert decode(bytes([0xEC, 0x02])) == (2, "jz", ["0x6"])
+    assert decode(bytes([0xEE, 0x00])) == (2, "jnz", ["0x2"])
+
+
+def test_jb_jnb_jbc():
+    # 0x97, byte1 top bits select jb(0x80)/jnb(0xA0)/jbc(0xC0); bit,rel8 (6-98/104/99)
+    assert decode(bytes([0x97, 0x81, 0x05, 0x01])) == (4, "jb", ["0x105", "0x6"])
+    assert decode(bytes([0x97, 0xA0, 0x00, 0x00])) == (4, "jnb", ["0x000", "0x4"])
+    assert decode(bytes([0x97, 0xC0, 0x00, 0x00]))[1] == "jbc"
+
+
+def test_cjne_forms():
+    # CJNE Rd,direct,rel8 (0xE2, byte1 bit3=0) (6-77)
+    assert decode(bytes([0xE2, 0x12, 0x34, 0x01])) == (4, "cjne.b", ["R1", "0x234", "0x6"])
+    # CJNE Rd,#data8,rel8 (0xE3, byte1 bit3=0) (6-78)
+    assert decode(bytes([0xE3, 0x30, 0x01, 0x55])) == (4, "cjne.b", ["R3", "#0x55", "0x6"])
+    # CJNE [Rd],#data8,rel8 (0xE3, byte1 bit3=1)
+    assert decode(bytes([0xE3, 0x28, 0x01, 0x55])) == (4, "cjne.b", ["[R2]", "#0x55", "0x6"])
+
+
+def test_djnz_forms():
+    # DJNZ Rd,rel8 (0x87, byte1 = dddd 1000; shares byte0 with PUSH/POP) (6-95)
+    assert decode(bytes([0x87, 0x18, 0x01])) == (3, "djnz.b", ["R1", "0x5"])
+    # DJNZ direct,rel8 (0xE2, byte1 bit3=1; shares byte0 with CJNE Rd,direct)
+    assert decode(bytes([0xE2, 0x0A, 0x34, 0x01])) == (4, "djnz.b", ["0x234", "0x6"])
+    # sanity: PUSH still wins its 0x87 byte1
+    assert decode(bytes([0x87, 0x32, 0x34]))[1] == "push.b"
+
+
 def test_unknown_opcode_is_not_guessed():
     # An opcode group we have not decoded yet must render "?", never fabricated.
     size, mnem, ops = decode(bytes([0xE0, 0x00]))

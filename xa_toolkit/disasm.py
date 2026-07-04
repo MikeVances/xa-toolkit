@@ -109,6 +109,39 @@ def decode(mem: Sequence[int], pc: int = 0) -> Tuple[int, str, List[str]]:
             return (2, "jmp", [f"[{_r(b1 & 0x7)}]"])
         # other 0xD6 forms (JMP [A+DPTR], [[Rs+]], CALL [Rs], ...) not yet decoded
 
+    # -- CJNE / DJNZ direct / JB-family / JZ / JNZ (Ch.6) --------------------
+    if b0 in (0xEC, 0xEE):                       # JZ 0xEC (6-106) / JNZ 0xEE (6-105)
+        r = mem[pc + 1] - 0x100 if mem[pc + 1] >= 0x80 else mem[pc + 1]
+        return (2, "jz" if b0 == 0xEC else "jnz", [f"0x{(pc + 2 + r * 2) & 0xFFFFFF:x}"])
+    if b0 == 0x97:                               # JB/JNB/JBC bit,rel8 (6-98/104/99)
+        b1 = mem[pc + 1]
+        mnem = {0x80: "jb", 0xA0: "jnb", 0xC0: "jbc"}.get(b1 & 0xE0)
+        if mnem is not None:
+            bit = ((b1 & 0x3) << 8) | mem[pc + 2]
+            r = mem[pc + 3] - 0x100 if mem[pc + 3] >= 0x80 else mem[pc + 3]
+            return (4, mnem, [f"0x{bit:03x}", f"0x{(pc + 4 + r * 2) & 0xFFFFFF:x}"])
+    if b0 in (0xE2, 0xEA):                       # CJNE Rd,direct (6-77) / DJNZ direct (6-95)
+        b1 = mem[pc + 1]
+        sfx = ".w" if b0 == 0xEA else ".b"
+        direct = ((b1 & 0x7) << 8) | mem[pc + 2]
+        r = mem[pc + 3] - 0x100 if mem[pc + 3] >= 0x80 else mem[pc + 3]
+        tgt = f"0x{(pc + 4 + r * 2) & 0xFFFFFF:x}"
+        if (b1 & 0x08) == 0:                     # CJNE Rd,direct,rel8 (byte1 = dddd 0 DDD)
+            return (4, "cjne" + sfx, [_r((b1 >> 4) & 0xF), f"0x{direct:03x}", tgt])
+        return (4, "djnz" + sfx, [f"0x{direct:03x}", tgt])   # DJNZ direct (0000 1 DDD)
+    if b0 in (0xE3, 0xEB):                       # CJNE Rd/[Rd],#dataN,rel8 (6-78)
+        b1 = mem[pc + 1]
+        sfx = ".w" if b0 == 0xEB else ".b"
+        indirect = bool(b1 & 0x08)
+        d = (b1 >> 4) & (0x7 if indirect else 0xF)
+        dest = f"[{_r(d)}]" if indirect else _r(d)
+        r = mem[pc + 2] - 0x100 if mem[pc + 2] >= 0x80 else mem[pc + 2]
+        if b0 == 0xE3:                           # #data8
+            imm, size = f"#0x{mem[pc + 3]:02x}", 4
+        else:                                    # #data16
+            imm, size = f"#0x{(mem[pc + 3] << 8) | mem[pc + 4]:04x}", 5
+        return (size, "cjne" + sfx, [dest, imm, f"0x{(pc + size + r * 2) & 0xFFFFFF:x}"])
+
     # -- shift / rotate group (byte & word forms; Ch.6) ----------------------
     if b0 in SHIFT_REG:                        # ASL/ASR Rd,Rs
         mnem, sfx = SHIFT_REG[b0]
@@ -166,9 +199,12 @@ def decode(mem: Sequence[int], pc: int = 0) -> Tuple[int, str, List[str]]:
         # ANL/ORL C,/bit and MOV C,bit / bit,C use other byte1 values — TODO.
 
     # -- stack: PUSH/POP/PUSHU/POPU + XCH (Ch.6) -----------------------------
-    if b0 in (0x87, 0x8F):                      # PUSH/POP direct (6-140/6-143)
+    if b0 in (0x87, 0x8F):                      # PUSH/POP direct (6-140/6-143) OR DJNZ Rd,rel8 (6-95)
         b1 = mem[pc + 1]
         sfx = ".w" if b0 == 0x8F else ".b"
+        if (b1 & 0x0F) == 0x08:                 # DJNZ Rd,rel8 : byte1 = dddd 1000
+            rel8 = mem[pc + 2] - 0x100 if mem[pc + 2] >= 0x80 else mem[pc + 2]
+            return (3, "djnz" + sfx, [_r((b1 >> 4) & 0xF), f"0x{(pc + 3 + rel8 * 2) & 0xFFFFFF:x}"])
         op = {0x00: "popu", 0x10: "pop", 0x20: "pushu", 0x30: "push"}.get(b1 & 0xF8)
         if op is not None:
             direct = ((b1 & 0x7) << 8) | mem[pc + 2]

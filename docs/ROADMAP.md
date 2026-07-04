@@ -32,7 +32,9 @@ Source: *Philips XA User Guide*, Chapter 6 (per-instruction encodings) + Table 6
    - [x] FJMP addr24 (0xD4), JMP rel16 (0xD5), JMP [Rs] / RET / RETI (0xD6 group). Done 2026-07-03.
    - [ ] **FCALL** (0xC2 collides with a byte-shift — resolve with the shift group) and
          **CALL rel16** (opcode box didn't render on p. 6-75 — re-read).
-   - [ ] JMP [A+DPTR] / JMP [[Rs+]] (other 0xD6 byte1 forms), CJNE, DJNZ, JB/JBC/JNB, JZ/JNZ.
+   - [x] CJNE (Rd,direct 0xE2/EA; Rd/[Rd],#data8/16 0xE3/EB), DJNZ (Rd 0x87/8F; direct 0xE2/EA),
+         JB/JNB/JBC (0x97), JZ 0xEC / JNZ 0xEE. Multiplexed byte0 resolved via byte1. Done 2026-07-04.
+   - [ ] JMP [A+DPTR] / JMP [[Rs+]] (other 0xD6 byte1 forms). **Flow group essentially complete.**
 6. **Bit ops** (byte0 0x08, byte1[7:2] = op, 10-bit bit addr):
    - [x] CLR (0x00), SETB (0x10), ANL C,bit (0x40), ORL C,bit (0x60). Done 2026-07-04.
    - [ ] ANL/ORL C,/bit (complement), MOV C,bit / MOV bit,C.
