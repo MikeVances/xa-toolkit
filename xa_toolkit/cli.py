@@ -59,6 +59,37 @@ def sweep(data, base: int = 0, start: int = 0, length: Optional[int] = None) -> 
     return out
 
 
+def xrefs_to(insns: List[dict], target: int) -> List[dict]:
+    """Instructions whose control-flow target equals `target`."""
+    hits = []
+    for i in insns:
+        if i["flow"] in ("jump", "call", "cond"):
+            for op in i["operands"]:
+                if op.startswith("0x"):
+                    try:
+                        if int(op, 16) == target:
+                            hits.append(i)
+                            break
+                    except ValueError:
+                        pass
+    return hits
+
+
+def _cmd_xref(args) -> int:
+    with open(args.file, "rb") as fh:
+        data = fh.read()
+    insns = sweep(data, args.base, args.start, args.len)
+    hits = xrefs_to(insns, args.to)
+    if args.json:
+        json.dump(hits, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    else:
+        print(f"# {len(hits)} reference(s) to 0x{args.to:x}")
+        for i in hits:
+            print(f"{i['addr']:06x}:  {i['mnemonic']:<8} {', '.join(i['operands'])}")
+    return 0
+
+
 def _cmd_disasm(args) -> int:
     with open(args.file, "rb") as fh:
         data = fh.read()
@@ -89,6 +120,15 @@ def main(argv: Optional[List[str]] = None) -> int:
     d.add_argument("--len", type=_int0, default=None, help="number of bytes to decode")
     d.add_argument("--json", action="store_true", help="emit structured JSON (see AGENTS.md)")
     d.set_defaults(func=_cmd_disasm)
+
+    x = sub.add_parser("xref", help="find control-flow references to an address")
+    x.add_argument("file")
+    x.add_argument("--to", type=_int0, required=True, help="target address to find references to")
+    x.add_argument("--base", type=_int0, default=0)
+    x.add_argument("--start", type=_int0, default=0)
+    x.add_argument("--len", type=_int0, default=None)
+    x.add_argument("--json", action="store_true")
+    x.set_defaults(func=_cmd_xref)
 
     args = p.parse_args(argv)
     return args.func(args)

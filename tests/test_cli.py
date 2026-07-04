@@ -29,3 +29,14 @@ def test_sweep_unknown_advances_one_byte():
 def test_sweep_cond_flow_classified():
     insns = sweep(bytes([0xF0, 0x02]))   # BCC
     assert insns[0]["flow"] == "cond"
+
+
+def test_xref():
+    from xa_toolkit.cli import xrefs_to
+    # BR +2 at 0 -> target 0+2+2*2 = 6 ; then NOPs
+    data = bytes([0xFE, 0x02, 0x00, 0x00, 0x00, 0x00])
+    insns = sweep(data)
+    hits = xrefs_to(insns, 0x6)
+    assert len(hits) == 1
+    assert hits[0]["mnemonic"] == "br"
+    assert xrefs_to(insns, 0x100) == []

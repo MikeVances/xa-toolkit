@@ -49,7 +49,8 @@ Source: *Philips XA User Guide*, Chapter 6 (per-instruction encodings) + Table 6
 - [ ] `emu.py` — execute decoded instructions (regs/RAM/SFR) for data-flow analysis.
 - [x] `cli.py` — `xa disasm FILE [--base/--start/--len] [--json]`: linear sweep, human table +
       structured JSON (AGENTS.md schema, flow classification). Runnable end-to-end. Done 2026-07-04.
-- [ ] `xa xref` / `xa emu`, `trace.py`.
+- [x] `xa xref FILE --to ADDR [--json]` — control-flow references. Done 2026-07-04.
+- [ ] `xa emu`, `trace.py`.
 - [ ] MCP server (`xa mcp`) per `AGENTS.md`.
 - [ ] `git init` + first commit + push to `github.com/MikeVances/xa-toolkit`.
 - [ ] Petr Novak outreach (draft ready) — attribution / optional license of the original module.
