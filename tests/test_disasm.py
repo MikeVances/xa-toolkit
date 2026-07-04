@@ -234,6 +234,29 @@ def test_rotate_still_wins_b0_b7():
     assert decode(bytes([0xB7, 0x10]))[1] == "rrc.b"
 
 
+def test_push_pop_direct():
+    # PUSH direct 0x87/8F, byte1 bits5-4 select push/pop/user (6-140/6-143).
+    # PUSH.b 0x234 -> byte0 0x87, byte1 0x32 (0x30|2), byte2 0x34
+    assert decode(bytes([0x87, 0x32, 0x34])) == (3, "push.b", ["0x234"])
+    assert decode(bytes([0x8F, 0x11, 0x05])) == (3, "pop.w", ["0x105"])
+    assert decode(bytes([0x87, 0x20, 0x00]))[1] == "pushu.b"
+    assert decode(bytes([0x87, 0x00, 0x00]))[1] == "popu.b"
+
+
+def test_push_pop_rlist():
+    # PUSH Rlist word: byte0 = 0 HL pp uu SZ 111. PUSH.w = 0x0F, bitmap bit0|bit2
+    assert decode(bytes([0x0F, 0x05])) == (2, "push.w", ["{R0,R2}"])
+    assert decode(bytes([0x2F, 0x80])) == (2, "pop.w", ["{R7}"])
+    # byte lower group (SZ=0, HL=0): bit0=R0L, bit3=R1H
+    assert decode(bytes([0x07, 0x09])) == (2, "push.b", ["{R0L,R1H}"])
+
+
+def test_xch_forms():
+    assert decode(bytes([0x60, 0x12])) == (2, "xch.b", ["R1", "R2"])       # Rd,Rs
+    assert decode(bytes([0x58, 0x34])) == (2, "xch.w", ["R3", "[R4]"])     # Rd,[Rs]
+    assert decode(bytes([0xA0, 0x19, 0x02])) == (3, "xch.b", ["R1", "0x102"])  # Rd,direct
+
+
 def test_unknown_opcode_is_not_guessed():
     # An opcode group we have not decoded yet must render "?", never fabricated.
     size, mnem, ops = decode(bytes([0xE0, 0x00]))

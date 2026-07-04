@@ -31,6 +31,19 @@ def _r(n: int) -> str:
     return f"R{n}"
 
 
+def _rlist(bitmap: int, word: bool, high: bool) -> str:
+    """Decode a PUSH/POP register-list bitmap (Ch.6 pp. 6-142). Bit i selects:
+    word -> Ri ; byte -> R(base+i//2)L/H, base = 4 if high else 0."""
+    regs = []
+    for i in range(8):
+        if bitmap & (1 << i):
+            if word:
+                regs.append(f"R{i}")
+            else:
+                regs.append(f"R{(4 if high else 0) + i // 2}{'L' if i % 2 == 0 else 'H'}")
+    return "{" + ",".join(regs) + "}"
+
+
 def decode(mem: Sequence[int], pc: int = 0) -> Tuple[int, str, List[str]]:
     """Decode one instruction at `mem[pc]`. Returns (size, mnemonic, operands)."""
     b0 = mem[pc]
@@ -136,6 +149,30 @@ def decode(mem: Sequence[int], pc: int = 0) -> Tuple[int, str, List[str]]:
             return (4, "movs" + sfx, [f"[{_r(ptr)}+0x{off:04x}]", imm])
         if msub == 0b110:
             return (3, "movs" + sfx, [f"0x{(ptr << 8) | mem[pc + 2]:03x}", imm])
+
+    # -- stack: PUSH/POP/PUSHU/POPU + XCH (Ch.6) -----------------------------
+    if b0 in (0x87, 0x8F):                      # PUSH/POP direct (6-140/6-143)
+        b1 = mem[pc + 1]
+        sfx = ".w" if b0 == 0x8F else ".b"
+        op = {0x00: "popu", 0x10: "pop", 0x20: "pushu", 0x30: "push"}.get(b1 & 0xF8)
+        if op is not None:
+            direct = ((b1 & 0x7) << 8) | mem[pc + 2]
+            return (3, op + sfx, [f"0x{direct:03x}"])
+    if (b0 & 0x87) == 0x07:                      # PUSH/POP Rlist (6-141/6-144)
+        word = bool((b0 >> 3) & 1)
+        op = ("pop" if (b0 >> 5) & 1 else "push") + ("u" if (b0 >> 4) & 1 else "")
+        return (2, op + (".w" if word else ".b"),
+                [_rlist(mem[pc + 1], word, bool((b0 >> 6) & 1))])
+    if b0 in (0x60, 0x68):                       # XCH Rd,Rs (6-169)
+        b1 = mem[pc + 1]
+        return (2, "xch" + (".w" if b0 == 0x68 else ".b"), [_r((b1 >> 4) & 0xF), _r(b1 & 0xF)])
+    if b0 in (0x50, 0x58):                       # XCH Rd,[Rs]
+        b1 = mem[pc + 1]
+        return (2, "xch" + (".w" if b0 == 0x58 else ".b"), [_r((b1 >> 4) & 0xF), f"[{_r(b1 & 0x7)}]"])
+    if b0 in (0xA0, 0xA8):                       # XCH Rd,direct
+        b1 = mem[pc + 1]
+        direct = ((b1 & 0x7) << 8) | mem[pc + 2]
+        return (3, "xch" + (".w" if b0 == 0xA8 else ".b"), [_r((b1 >> 4) & 0xF), f"0x{direct:03x}"])
 
     # -- basic-ALU register/memory group: byte0 = OOOO S mmm ------------------
     # (ADD..MOV = nibbles 0x0..0x8; sub-mode in the low 3 bits selects 1..6).
