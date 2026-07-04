@@ -150,6 +150,21 @@ def decode(mem: Sequence[int], pc: int = 0) -> Tuple[int, str, List[str]]:
         if msub == 0b110:
             return (3, "movs" + sfx, [f"0x{(ptr << 8) | mem[pc + 2]:03x}", imm])
 
+    # -- bit manipulation: CLR/SETB/ANL/ORL (byte0 0x08; Ch.6) ---------------
+    # byte1[7:2] selects the op; bit address (10-bit) = (byte1 & 3):byte2.
+    if b0 == 0x08:
+        b1 = mem[pc + 1]
+        bit = ((b1 & 0x3) << 8) | mem[pc + 2]
+        info = {0x00: ("clr", False),    # p. 6-79
+                0x10: ("setb", False),   # p. 6-153
+                0x40: ("anl", True),     # ANL C,bit  p. 6-53
+                0x60: ("orl", True),     # ORL C,bit  p. 6-138
+                }.get(b1 & 0xFC)
+        if info is not None:
+            mnem, with_c = info
+            return (3, mnem, (["C", f"0x{bit:03x}"] if with_c else [f"0x{bit:03x}"]))
+        # ANL/ORL C,/bit and MOV C,bit / bit,C use other byte1 values — TODO.
+
     # -- stack: PUSH/POP/PUSHU/POPU + XCH (Ch.6) -----------------------------
     if b0 in (0x87, 0x8F):                      # PUSH/POP direct (6-140/6-143)
         b1 = mem[pc + 1]

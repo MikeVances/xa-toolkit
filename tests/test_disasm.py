@@ -257,6 +257,14 @@ def test_xch_forms():
     assert decode(bytes([0xA0, 0x19, 0x02])) == (3, "xch.b", ["R1", "0x102"])  # Rd,direct
 
 
+def test_bit_ops():
+    # byte0 0x08; byte1[7:2] = op; bit addr (10-bit) = (byte1 & 3):byte2 (Ch.6)
+    assert decode(bytes([0x08, 0x41, 0x23])) == (3, "anl", ["C", "0x123"])   # ANL C,bit (6-53)
+    assert decode(bytes([0x08, 0x61, 0x05])) == (3, "orl", ["C", "0x105"])   # ORL C,bit (6-138)
+    assert decode(bytes([0x08, 0x00, 0x80])) == (3, "clr", ["0x080"])        # CLR bit (6-79)
+    assert decode(bytes([0x08, 0x12, 0xA0])) == (3, "setb", ["0x2a0"])       # SETB bit (6-153)
+
+
 def test_unknown_opcode_is_not_guessed():
     # An opcode group we have not decoded yet must render "?", never fabricated.
     size, mnem, ops = decode(bytes([0xE0, 0x00]))

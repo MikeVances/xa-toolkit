@@ -33,7 +33,9 @@ Source: *Philips XA User Guide*, Chapter 6 (per-instruction encodings) + Table 6
    - [ ] **FCALL** (0xC2 collides with a byte-shift — resolve with the shift group) and
          **CALL rel16** (opcode box didn't render on p. 6-75 — re-read).
    - [ ] JMP [A+DPTR] / JMP [[Rs+]] (other 0xD6 byte1 forms), CJNE, DJNZ, JB/JBC/JNB, JZ/JNZ.
-6. [ ] **Bit ops**: ANL/ORL C,bit(/bit), CLR/SETB bit, MOV C,bit / bit,C.
+6. **Bit ops** (byte0 0x08, byte1[7:2] = op, 10-bit bit addr):
+   - [x] CLR (0x00), SETB (0x10), ANL C,bit (0x40), ORL C,bit (0x60). Done 2026-07-04.
+   - [ ] ANL/ORL C,/bit (complement), MOV C,bit / MOV bit,C.
 7. [ ] **Exception**: NOP, BKPT, RESET, TRAP #data4.
 8. [ ] Per-opcode test (each row ↔ its Ch.6 page). **Adversarially verify** every encoding against the datasheet.
 
