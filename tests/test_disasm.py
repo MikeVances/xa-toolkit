@@ -314,6 +314,25 @@ def test_trap():
     assert decode(bytes([0xD6, 0x35])) == (2, "trap", ["#0x5"])
 
 
+def test_lea():
+    # LEA Rd,[Rs+offset8] 0x40 / offset16 0x48; byte1 = 0ddd 0sss (6-107)
+    assert decode(bytes([0x40, 0x12, 0x40])) == (3, "lea", ["R1", "[R2+0x40]"])
+    assert decode(bytes([0x48, 0x12, 0x12, 0x34])) == (4, "lea", ["R1", "[R2+0x1234]"])
+
+
+def test_lsr_reg():
+    # LSR Rd,Rs : 1100 SZ1SZ0 00 (6-108)
+    assert decode(bytes([0xC0, 0x12])) == (2, "lsr.b", ["R1", "R2"])
+
+
+def test_adds():
+    # ADDS <dest>,#data4 in the 0xA sub-mode space (6-45)
+    assert decode(bytes([0xA1, 0x35])) == (2, "adds.b", ["R3", "#0x5"])
+    assert decode(bytes([0xA2, 0x24])) == (2, "adds.b", ["[R2]", "#0x4"])
+    # sanity: 0xA0/A8 stay XCH direct, 0xA7/AF stay MOVX
+    assert decode(bytes([0xA7, 0x12]))[1] == "movx.b"
+
+
 def test_unknown_opcode_is_not_guessed():
     # An opcode group we have not decoded yet must render "?", never fabricated.
     size, mnem, ops = decode(bytes([0xE0, 0x00]))

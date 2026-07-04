@@ -171,6 +171,7 @@ OP_D6 = 0xD6
 # because FCALL is not decoded yet; resolve when FCALL is added.
 # --------------------------------------------------------------------------
 SHIFT_REG: dict[int, tuple] = {          # byte1 = dddd ssss -> "Rd, Rs"
+    0xC0: ("lsr", ".b"), 0xC8: ("lsr", ".w"),   # p. 6-108 (0xCC = dword, deferred)
     0xC1: ("asl", ".b"), 0xC9: ("asl", ".w"),
     0xC2: ("asr", ".b"), 0xCA: ("asr", ".w"),
 }

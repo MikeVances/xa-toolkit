@@ -211,6 +211,33 @@ def decode(mem: Sequence[int], pc: int = 0) -> Tuple[int, str, List[str]]:
             return (3, mnem, (["C", f"0x{bit:03x}"] if with_c else [f"0x{bit:03x}"]))
         # ANL/ORL C,/bit and MOV C,bit / bit,C use other byte1 values — TODO.
 
+    if b0 in (0x40, 0x48):                       # LEA Rd,[Rs+offset8/16] (6-107)
+        b1 = mem[pc + 1]
+        dest, src = _r((b1 >> 4) & 0x7), _r(b1 & 0x7)
+        if b0 == 0x40:
+            return (3, "lea", [dest, f"[{src}+0x{mem[pc + 2]:02x}]"])
+        off = (mem[pc + 2] << 8) | mem[pc + 3]
+        return (4, "lea", [dest, f"[{src}+0x{off:04x}]"])
+    if 0xA1 <= b0 <= 0xA6 or 0xA9 <= b0 <= 0xAE:  # ADDS <dest>,#data4 (6-45)
+        asub = b0 & 0x7                           # (0xA0/A8=XCH direct, 0xA7/AF=MOVX handled below)
+        sfx = ".w" if (b0 & 0x08) else ".b"
+        b1 = mem[pc + 1]
+        imm = f"#0x{b1 & 0xF:x}"
+        if asub == 0b001:
+            return (2, "adds" + sfx, [_r((b1 >> 4) & 0xF), imm])
+        ptr = (b1 >> 4) & 0x7
+        if asub == 0b010:
+            return (2, "adds" + sfx, [f"[{_r(ptr)}]", imm])
+        if asub == 0b011:
+            return (2, "adds" + sfx, [f"[{_r(ptr)}+]", imm])
+        if asub == 0b100:
+            return (3, "adds" + sfx, [f"[{_r(ptr)}+0x{mem[pc + 2]:02x}]", imm])
+        if asub == 0b101:
+            off = (mem[pc + 2] << 8) | mem[pc + 3]
+            return (4, "adds" + sfx, [f"[{_r(ptr)}+0x{off:04x}]", imm])
+        if asub == 0b110:
+            return (3, "adds" + sfx, [f"0x{(ptr << 8) | mem[pc + 2]:03x}", imm])
+
     # -- stack: PUSH/POP/PUSHU/POPU + XCH (Ch.6) -----------------------------
     if b0 in (0x87, 0x8F):                      # PUSH/POP direct (6-140/6-143) OR DJNZ Rd,rel8 (6-95)
         b1 = mem[pc + 1]

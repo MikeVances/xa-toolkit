@@ -21,7 +21,8 @@ Source: *Philips XA User Guide*, Chapter 6 (per-instruction encodings) + Table 6
    - [x] ASL/ASR (reg + imm #data4, byte/word), RL/RLC/RR/RRC (imm #data4, byte/word). Done 2026-07-03.
          Resolved: ASR.b reg (0xC2) shares byte0 with the deferred FCALL.
    - [x] NEG/SEXT/CPL/DA (0x90/0x98, byte1 low nibble = op). Done 2026-07-04.
-   - [ ] Double-word (#data5) shift forms, LSR, NORM, ADDS, MUL/DIV, LEA.
+   - [x] LSR reg (0xC0/C8), ADDS (0xA sub-modes), LEA (0x40/48). Done 2026-07-04.
+   - [ ] Double-word (#data5) shift forms, LSR imm, NORM, MUL/DIV.
 4. **Data movement**:
    - [x] MOVC (Rd,[Rs+] 0x80/88; A,[A+DPTR] & A,[A+PC] 0x90), MOVX (0xA7/AF), MOVS (0xB1–B6/B9–BE,
          all sub-modes; coexists with RR/RRC at 0xB0/B7/B8/BF). Done 2026-07-03.
